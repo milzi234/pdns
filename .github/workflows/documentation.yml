@@ -3,9 +3,10 @@ name: 'Documentation'
 
 on:
   push:
-    branches: [master, feature/docs-netlify]
+    branches: [master]
   pull_request:
-    branches: [master, feature/docs-netlify]
+    branches: [master]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
