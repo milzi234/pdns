@@ -62,10 +62,10 @@ jobs:
         run: npm install netlify-cli@17.36.3 -g
 
       # Auth
-      - run: inv ci-docs-build
+      # - run: inv ci-docs-build
 
-      - run: mv html auth-html-docs
-        working-directory: ./docs/_build
+      # - run: mv html auth-html-docs
+      #   working-directory: ./docs/_build
       # - run: tar cf auth-html-docs.tar auth-html-docs
       #   working-directory: ./docs/_build
       # - uses: actions/upload-artifact@v4
@@ -91,12 +91,12 @@ jobs:
       # - run: sudo sh -c "truncate -s 0 /var/lib/docker/containers/${{ steps.proxpi-docker.outputs.id }}*/${{ steps.proxpi-docker.outputs.id }}*-json.log"
 
       # Rec
-      - run: inv ci-docs-rec-generate
-        working-directory: ./pdns/recursordist/settings
-      - run: inv ci-docs-build
-        working-directory: ./pdns/recursordist
-      - run: mv html rec-html-docs
-        working-directory: ./pdns/recursordist/docs/_build
+      # - run: inv ci-docs-rec-generate
+      #   working-directory: ./pdns/recursordist/settings
+      # - run: inv ci-docs-build
+      #   working-directory: ./pdns/recursordist
+      # - run: mv html rec-html-docs
+      #   working-directory: ./pdns/recursordist/docs/_build
       # - run: tar cf rec-html-docs.tar rec-html-docs
       #   working-directory: ./pdns/recursordist/docs/_build
       # - uses: actions/upload-artifact@v4
@@ -137,8 +137,8 @@ jobs:
       # - run: bzip2 dnsdist-html-docs.tar
       #   if: ${{github.ref_name == 'master'}}
       #   working-directory: ./pdns/dnsdistdist/docs/_build
-      - run: inv ci-docs-build-pdf
-        working-directory: ./pdns/dnsdistdist
+      # - run: inv ci-docs-build-pdf
+      #   working-directory: ./pdns/dnsdistdist
       # - uses: actions/upload-artifact@v4
       #   with:
       #     name: dnsdist-${{steps.get-version.outputs.pdns_version}}.pdf
@@ -155,7 +155,7 @@ jobs:
         id: netlify_deploy
         run: |
           netlify deploy \
-            --dir ./pdns/dnsdist/docs/_build/dnsdist/dnsdist-html-docs/ \
+            --dir ./pdns/dnsdistdist/docs/_build/dnsdist-html-docs \
             --site ${{ secrets.NETLIFY_SITE_ID_DNSDIST }} \
             --auth ${{ secrets.NETLIFY_API_TOKEN }}
 
