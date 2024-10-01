@@ -155,7 +155,7 @@ jobs:
         id: netlify_deploy
         run: |
           netlify deploy \
-            --dir ./pdns/dnsdistdist/docs/_build/dnsdist/dnsdist-html-docs/ \
+            --dir ./pdns/dnsdist/docs/_build/dnsdist/dnsdist-html-docs/ \
             --site ${{ secrets.NETLIFY_SITE_ID_DNSDIST }} \
             --auth ${{ secrets.NETLIFY_API_TOKEN }}
 
