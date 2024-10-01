@@ -151,6 +151,9 @@ jobs:
       # - run: docker logs ${{ steps.proxpi-docker.outputs.id }} 2>&1 | grep whl | awk '{print $8}' | cut -d "/" -f 4 | awk -F'-' '{print $1"=="$2}' | sort -u --ignore-case > /tmp/proxpi-dnsdist.log
       # - id: pip-logs-dnsdist
       #   run: echo "list-dnsdist=$(cat /tmp/proxpi-dnsdist.log | base64 -w0)" >> "$GITHUB_OUTPUT"
+      - name: Copy PDF to HTML docs directory
+        run: |
+          cp ./pdns/dnsdistdist/docs/_build/latex/dnsdist.pdf ./pdns/dnsdistdist/docs/_build/dnsdist-html-docs/
       - name: Deploy DNSdist docs to Netlify
         id: netlify_deploy
         run: |
