@@ -137,8 +137,8 @@ jobs:
       # - run: bzip2 dnsdist-html-docs.tar
       #   if: ${{github.ref_name == 'master'}}
       #   working-directory: ./pdns/dnsdistdist/docs/_build
-      # - run: inv ci-docs-build-pdf
-      #   working-directory: ./pdns/dnsdistdist
+      - run: inv ci-docs-build-pdf
+        working-directory: ./pdns/dnsdistdist
       # - uses: actions/upload-artifact@v4
       #   with:
       #     name: dnsdist-${{steps.get-version.outputs.pdns_version}}.pdf
@@ -155,7 +155,7 @@ jobs:
         id: netlify_deploy
         run: |
           netlify deploy \
-            --dir dist \
+            --dir ./pdns/dnsdistdist/docs/_build \
             --site ${{ secrets.NETLIFY_SITE_ID_DNSDIST }} \
             --auth ${{ secrets.NETLIFY_API_TOKEN }}
 
