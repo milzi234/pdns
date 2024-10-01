@@ -137,8 +137,8 @@ jobs:
       # - run: bzip2 dnsdist-html-docs.tar
       #   if: ${{github.ref_name == 'master'}}
       #   working-directory: ./pdns/dnsdistdist/docs/_build
-      # - run: inv ci-docs-build-pdf
-      #   working-directory: ./pdns/dnsdistdist
+      - run: inv ci-docs-build-pdf
+        working-directory: ./pdns/dnsdistdist
       # - uses: actions/upload-artifact@v4
       #   with:
       #     name: dnsdist-${{steps.get-version.outputs.pdns_version}}.pdf
