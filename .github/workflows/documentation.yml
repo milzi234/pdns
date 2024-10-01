@@ -7,9 +7,10 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch: {}
-
+ 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   build-upload-docs:
@@ -17,6 +18,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       SERVICE_IP_ADDR: 127.0.0.1
+      BRANCH_NAME: ${{ github.ref_name }}
     services:
       database:
         image: epicwink/proxpi
@@ -62,114 +64,218 @@ jobs:
         run: npm install netlify-cli@17.36.3 -g
 
       # Auth
-      # - run: inv ci-docs-build
+      - run: inv ci-docs-build
 
-      # - run: mv html auth-html-docs
-      #   working-directory: ./docs/_build
-      # - run: tar cf auth-html-docs.tar auth-html-docs
-      #   working-directory: ./docs/_build
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: authoritative-html-docs-${{steps.get-version.outputs.pdns_version}}
-      #     path: ./docs/_build/auth-html-docs.tar
-      # - run: bzip2 auth-html-docs.tar
-      #   if: ${{github.ref_name == 'master'}}
-      #   working-directory: ./docs/_build
-      # - run: inv ci-docs-build-pdf
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: PowerDNS-Authoritative-${{steps.get-version.outputs.pdns_version}}.pdf
-      #     path: ./docs/_build/latex/PowerDNS-Authoritative.pdf
-      # - run: inv ci-docs-upload-master --docs-host="${DOCS_HOST}" --pdf="PowerDNS-Authoritative.pdf" --username="docs_powerdns_com" --product="auth" --directory="/${AUTH_DOCS_DIR}/"
-      #   env:
-      #     DOCS_HOST: ${{vars.DOCS_HOST}}
-      #     AUTH_DOCS_DIR: ${{vars.AUTH_DOCS_DIR}}
-      #   if: ${{github.ref_name == 'master' && steps.setup-ssh.outputs.have_ssh_key != ''}}
-      # - run: docker logs ${{ steps.proxpi-docker.outputs.id }} 2>&1 | grep whl | awk '{print $8}' | cut -d "/" -f 4 | awk -F'-' '{print $1"=="$2}' | sort -u --ignore-case > /tmp/proxpi-auth.log
-      # - id: pip-logs-auth
-      #   run: echo "list-auth=$(cat /tmp/proxpi-auth.log | base64 -w0)" >> "$GITHUB_OUTPUT"
-      # - run: sudo sh -c "truncate -s 0 /var/lib/docker/containers/${{ steps.proxpi-docker.outputs.id }}*/${{ steps.proxpi-docker.outputs.id }}*-json.log"
+      - run: mv html auth-html-docs
+        working-directory: ./docs/_build
+      - run: tar cf auth-html-docs.tar auth-html-docs
+        working-directory: ./docs/_build
+      - uses: actions/upload-artifact@v4
+        if: ${{ !secrets.NETLIFY_SITE_ID_AUTH }}
+        with:
+          name: authoritative-html-docs-${{steps.get-version.outputs.pdns_version}}
+          path: ./docs/_build/auth-html-docs.tar
+      - run: bzip2 auth-html-docs.tar
+        if: ${{github.ref_name == 'master'}}
+        working-directory: ./docs/_build
+      - run: inv ci-docs-build-pdf
+      - uses: actions/upload-artifact@v4
+        if: ${{ !secrets.NETLIFY_SITE_ID_AUTH }}
+        with:
+          name: PowerDNS-Authoritative-${{steps.get-version.outputs.pdns_version}}.pdf
+          path: ./docs/_build/latex/PowerDNS-Authoritative.pdf
+      - run: inv ci-docs-upload-master --docs-host="${DOCS_HOST}" --pdf="PowerDNS-Authoritative.pdf" --username="docs_powerdns_com" --product="auth" --directory="/${AUTH_DOCS_DIR}/"
+        env:
+          DOCS_HOST: ${{vars.DOCS_HOST}}
+          AUTH_DOCS_DIR: ${{vars.AUTH_DOCS_DIR}}
+        if: ${{github.ref_name == 'master' && steps.setup-ssh.outputs.have_ssh_key != ''}}
+      - run: docker logs ${{ steps.proxpi-docker.outputs.id }} 2>&1 | grep whl | awk '{print $8}' | cut -d "/" -f 4 | awk -F'-' '{print $1"=="$2}' | sort -u --ignore-case > /tmp/proxpi-auth.log
+      - id: pip-logs-auth
+        run: echo "list-auth=$(cat /tmp/proxpi-auth.log | base64 -w0)" >> "$GITHUB_OUTPUT"
+      - run: sudo sh -c "truncate -s 0 /var/lib/docker/containers/${{ steps.proxpi-docker.outputs.id }}*/${{ steps.proxpi-docker.outputs.id }}*-json.log"
+      - name: Copy PDF to HTML docs directory
+        run: |
+          cp ./docs/_build/latex/PowerDNS-Authoritative.pdf ./docs/_build/auth-html-docs/
+      - name: Deploy Auth docs to Netlify
+        id: netlify_deploy_auth
+        if: ${{ secrets.NETLIFY_SITE_ID_AUTH }}
+        run: |
+          prod_flag=""
+          if [ "$BRANCH_NAME" = "master" ]; then prod_flag="--prod"; fi
+          netlify deploy \
+            --dir ./docs/_build/auth-html-docs \
+            --site ${{ secrets.NETLIFY_SITE_ID_AUTH }} \
+            --auth ${{ secrets.NETLIFY_API_TOKEN }} \
+            $prod_flag\
+            --json \
+            > netlify_deploy_auth_output.json
 
       # Rec
-      # - run: inv ci-docs-rec-generate
-      #   working-directory: ./pdns/recursordist/settings
-      # - run: inv ci-docs-build
-      #   working-directory: ./pdns/recursordist
-      # - run: mv html rec-html-docs
-      #   working-directory: ./pdns/recursordist/docs/_build
-      # - run: tar cf rec-html-docs.tar rec-html-docs
-      #   working-directory: ./pdns/recursordist/docs/_build
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: recursor-html-docs-${{steps.get-version.outputs.pdns_version}}
-      #     path: ./pdns/recursordist/docs/_build/rec-html-docs.tar
-      # - run: bzip2 rec-html-docs.tar
-      #   if: ${{github.ref_name == 'master'}}
-      #   working-directory: ./pdns/recursordist/docs/_build
-      # - run: inv ci-docs-build-pdf
-      #   working-directory: ./pdns/recursordist
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: PowerDNS-Recursor-${{steps.get-version.outputs.pdns_version}}.pdf
-      #     path: ./pdns/recursordist/docs/_build/latex/PowerDNS-Recursor.pdf
-      # - run: inv ci-docs-upload-master --docs-host="${DOCS_HOST}" --pdf="PowerDNS-Recursor.pdf" --username="docs_powerdns_com" --product="rec" --directory="/${REC_DOCS_DIR}/"
-      #   env:
-      #     DOCS_HOST: ${{vars.DOCS_HOST}}
-      #     REC_DOCS_DIR: ${{vars.REC_DOCS_DIR}}
-      #   if: ${{github.ref_name == 'master' && steps.setup-ssh.outputs.have_ssh_key != ''}}
-      #   working-directory: ./pdns/recursordist
-      # - run: docker logs ${{ steps.proxpi-docker.outputs.id }} 2>&1 | grep whl | awk '{print $8}' | cut -d "/" -f 4 | awk -F'-' '{print $1"=="$2}' | sort -u --ignore-case > /tmp/proxpi-rec.log
-      # - id: pip-logs-rec
-      #   run: echo "list-rec=$(cat /tmp/proxpi-rec.log | base64 -w0)" >> "$GITHUB_OUTPUT"
-      # - run: sudo sh -c "truncate -s 0 /var/lib/docker/containers/${{ steps.proxpi-docker.outputs.id }}*/${{ steps.proxpi-docker.outputs.id }}*-json.log"
+      - run: inv ci-docs-rec-generate
+        working-directory: ./pdns/recursordist/settings
+      - run: inv ci-docs-build
+        working-directory: ./pdns/recursordist
+      - run: mv html rec-html-docs
+        working-directory: ./pdns/recursordist/docs/_build
+      - run: tar cf rec-html-docs.tar rec-html-docs
+        working-directory: ./pdns/recursordist/docs/_build
+      - uses: actions/upload-artifact@v4
+        if: ${{ !secrets.NETLIFY_SITE_ID_REC }}
+        with:
+          name: recursor-html-docs-${{steps.get-version.outputs.pdns_version}}
+          path: ./pdns/recursordist/docs/_build/rec-html-docs.tar
+      - run: bzip2 rec-html-docs.tar
+        if: ${{github.ref_name == 'master'}}
+        working-directory: ./pdns/recursordist/docs/_build
+      - run: inv ci-docs-build-pdf
+        working-directory: ./pdns/recursordist
+      - uses: actions/upload-artifact@v4
+        if: ${{ !secrets.NETLIFY_SITE_ID_REC }}
+        with:
+          name: PowerDNS-Recursor-${{steps.get-version.outputs.pdns_version}}.pdf
+          path: ./pdns/recursordist/docs/_build/latex/PowerDNS-Recursor.pdf
+      - run: inv ci-docs-upload-master --docs-host="${DOCS_HOST}" --pdf="PowerDNS-Recursor.pdf" --username="docs_powerdns_com" --product="rec" --directory="/${REC_DOCS_DIR}/"
+        env:
+          DOCS_HOST: ${{vars.DOCS_HOST}}
+          REC_DOCS_DIR: ${{vars.REC_DOCS_DIR}}
+        if: ${{github.ref_name == 'master' && steps.setup-ssh.outputs.have_ssh_key != ''}}
+        working-directory: ./pdns/recursordist
+      - run: docker logs ${{ steps.proxpi-docker.outputs.id }} 2>&1 | grep whl | awk '{print $8}' | cut -d "/" -f 4 | awk -F'-' '{print $1"=="$2}' | sort -u --ignore-case > /tmp/proxpi-rec.log
+      - id: pip-logs-rec
+        run: echo "list-rec=$(cat /tmp/proxpi-rec.log | base64 -w0)" >> "$GITHUB_OUTPUT"
+      - run: sudo sh -c "truncate -s 0 /var/lib/docker/containers/${{ steps.proxpi-docker.outputs.id }}*/${{ steps.proxpi-docker.outputs.id }}*-json.log"
+      - name: Copy PDF to HTML docs directory
+        run: |
+          cp ./pdns/recursordist/docs/_build/latex/PowerDNS-Recursor.pdf ./pdns/recursordist/docs/_build/rec-html-docs/
+      - name: Deploy Recursor docs to Netlify
+        id: netlify_deploy_rec
+        if: ${{ secrets.NETLIFY_SITE_ID_REC }}
+        run: |
+          prod_flag=""
+          if [ "$BRANCH_NAME" = "master" ]; then prod_flag="--prod"; fi
+          netlify deploy \
+            --dir ./pdns/recursordist/docs/_build/rec-html-docs \
+            --site ${{ secrets.NETLIFY_SITE_ID_REC }} \
+            --auth ${{ secrets.NETLIFY_API_TOKEN }} \
+            $prod_flag \
+            --json \
+            > netlify_deploy_rec_output.json
 
       # DNSdist
       - run: inv ci-docs-build
         working-directory: ./pdns/dnsdistdist
       - run: mv html dnsdist-html-docs
         working-directory: ./pdns/dnsdistdist/docs/_build
-      # - run: tar cf dnsdist-html-docs.tar dnsdist-html-docs
-      #   working-directory: ./pdns/dnsdistdist/docs/_build
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: dnsdist-html-docs-${{steps.get-version.outputs.pdns_version}}
-      #     path: ./pdns/dnsdistdist/docs/_build/dnsdist-html-docs.tar
-      # - run: bzip2 dnsdist-html-docs.tar
-      #   if: ${{github.ref_name == 'master'}}
-      #   working-directory: ./pdns/dnsdistdist/docs/_build
+      - run: tar cf dnsdist-html-docs.tar dnsdist-html-docs
+        working-directory: ./pdns/dnsdistdist/docs/_build
+      - uses: actions/upload-artifact@v4
+        if: ${{ !secrets.NETLIFY_SITE_ID_DNSDIST }}
+        with:
+          name: dnsdist-html-docs-${{steps.get-version.outputs.pdns_version}}
+          path: ./pdns/dnsdistdist/docs/_build/dnsdist-html-docs.tar
+      - run: bzip2 dnsdist-html-docs.tar
+        if: ${{github.ref_name == 'master'}}
+        working-directory: ./pdns/dnsdistdist/docs/_build
       - run: inv ci-docs-build-pdf
         working-directory: ./pdns/dnsdistdist
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: dnsdist-${{steps.get-version.outputs.pdns_version}}.pdf
-      #     path: ./pdns/dnsdistdist/docs/_build/latex/dnsdist.pdf
-      # - run: inv ci-docs-upload-master --docs-host="${DOCS_HOST}" --pdf="dnsdist.pdf" --username="dnsdist_org" --product="dnsdist"
-      #   env:
-      #     DOCS_HOST: ${{vars.DOCS_HOST}}
-      #   if: ${{github.ref_name == 'master' && steps.setup-ssh.outputs.have_ssh_key != ''}}
-      #   working-directory: ./pdns/dnsdistdist
-      # - run: docker logs ${{ steps.proxpi-docker.outputs.id }} 2>&1 | grep whl | awk '{print $8}' | cut -d "/" -f 4 | awk -F'-' '{print $1"=="$2}' | sort -u --ignore-case > /tmp/proxpi-dnsdist.log
-      # - id: pip-logs-dnsdist
-      #   run: echo "list-dnsdist=$(cat /tmp/proxpi-dnsdist.log | base64 -w0)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !secrets.NETLIFY_SITE_ID_DNSDIST }}
+        with:
+          name: dnsdist-${{steps.get-version.outputs.pdns_version}}.pdf
+          path: ./pdns/dnsdistdist/docs/_build/latex/dnsdist.pdf
+      - run: inv ci-docs-upload-master --docs-host="${DOCS_HOST}" --pdf="dnsdist.pdf" --username="dnsdist_org" --product="dnsdist"
+        env:
+          DOCS_HOST: ${{vars.DOCS_HOST}}
+        if: ${{github.ref_name == 'master' && steps.setup-ssh.outputs.have_ssh_key != ''}}
+        working-directory: ./pdns/dnsdistdist
+      - run: docker logs ${{ steps.proxpi-docker.outputs.id }} 2>&1 | grep whl | awk '{print $8}' | cut -d "/" -f 4 | awk -F'-' '{print $1"=="$2}' | sort -u --ignore-case > /tmp/proxpi-dnsdist.log
+      - id: pip-logs-dnsdist
+        run: echo "list-dnsdist=$(cat /tmp/proxpi-dnsdist.log | base64 -w0)" >> "$GITHUB_OUTPUT"
       - name: Copy PDF to HTML docs directory
         run: |
           cp ./pdns/dnsdistdist/docs/_build/latex/dnsdist.pdf ./pdns/dnsdistdist/docs/_build/dnsdist-html-docs/
       - name: Deploy DNSdist docs to Netlify
-        id: netlify_deploy
+        id: netlify_deploy_dnsdist
+        if: ${{ secrets.NETLIFY_SITE_ID_DNSDIST }}
         run: |
+          prod_flag=""
+          if [ "$BRANCH_NAME" = "master" ]; then prod_flag="--prod"; fi
           netlify deploy \
             --dir ./pdns/dnsdistdist/docs/_build/dnsdist-html-docs \
             --site ${{ secrets.NETLIFY_SITE_ID_DNSDIST }} \
-            --auth ${{ secrets.NETLIFY_API_TOKEN }}
+            --auth ${{ secrets.NETLIFY_API_TOKEN }} \
+            $prod_flag \
+            --json \
+            > netlify_deploy_dnsdist_output.json
+      - name: Generate URL Previews
+        id: url_previews
+        if: ${{ github.ref_name != 'master' }}
+        run: |
+          if [ -f netlify_deploy_auth_output.json ]; then
+            AUTH_PREVIEW_URL=$(jq -r '.deploy_url' netlify_deploy_auth_output.json)
+            echo "AUTH_PREVIEW_URL=$AUTH_PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f netlify_deploy_rec_output.json ]; then
+            REC_PREVIEW_URL=$(jq -r '.deploy_url' netlify_deploy_rec_output.json)
+            echo "REC_PREVIEW_URL=$REC_PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f netlify_deploy_dnsdist_output.json ]; then
+            DNSDIST_PREVIEW_URL=$(jq -r '.deploy_url' netlify_deploy_dnsdist_output.json)
+            echo "DNSDIST_PREVIEW_URL=$DNSDIST_PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          fi
 
-  # validate-pip-hashes:
-  #   name: Validate list of packages and hashes
-  #   runs-on: ubuntu-22.04
-  #   needs: build-upload-docs
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - run: for i in `echo "${{ needs.build-upload-docs.outputs.pip-list-auth }}" | base64 -d | sed 's/_/-/' | egrep -v "pip==|setuptools==|wheel==|setuptools-git=="`; do grep -qq -i $i docs/requirements.txt || ( echo "$i not found" && exit 1 ); done
-  #     - run: for i in `echo "${{ needs.build-upload-docs.outputs.pip-list-rec }}" | base64 -d | sed 's/_/-/' | egrep -v "pip==|setuptools==|wheel==|setuptools-git=="`; do grep -qq -i $i docs/requirements.txt || ( echo "$i not found" && exit 1 ); done
-  #       working-directory: ./pdns/recursordist
-  #     - run: for i in `echo "${{ needs.build-upload-docs.outputs.pip-list-dnsdist }}" | base64 -d | sed 's/_/-/' | egrep -v "pip==|setuptools==|wheel==|setuptools-git=="`; do grep -qq -i $i docs/requirements.txt || ( echo "$i not found" && exit 1 ); done
-  #       working-directory: ./pdns/dnsdistdist
+      - name: Comment URL Previews on PR
+        uses: actions/github-script@v7
+        if: ${{ github.ref_name != 'master' }}
+        env:
+          AUTH_PREVIEW_URL: ${{ steps.url_previews.outputs.AUTH_PREVIEW_URL }}
+          REC_PREVIEW_URL: ${{ steps.url_previews.outputs.REC_PREVIEW_URL }}
+          DNSDIST_PREVIEW_URL: ${{ steps.url_previews.outputs.DNSDIST_PREVIEW_URL }}
+        with:
+          script: |
+            async function comment(){
+              const result = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+              })
+
+              const issueNumber = result.data[0].number
+
+              if(issueNumber){
+                let commentBody = 'Preview URLs:\n'
+                if (process.env.AUTH_PREVIEW_URL) {
+                  commentBody += `- Authoritative: ${process.env.AUTH_PREVIEW_URL}\n`
+                }
+                if (process.env.REC_PREVIEW_URL) {
+                  commentBody += `- Recursor: ${process.env.REC_PREVIEW_URL}\n`
+                }
+                if (process.env.DNSDIST_PREVIEW_URL) {
+                  commentBody += `- DNSdist: ${process.env.DNSDIST_PREVIEW_URL}\n`
+                }
+
+                await github.rest.issues.createComment({
+                  issue_number: issueNumber,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: commentBody
+                })
+              } else {
+                console.log('No PR found for commit ' + context.sha)
+              }
+            }
+
+            comment()
+          
+
+  validate-pip-hashes:
+    name: Validate list of packages and hashes
+    runs-on: ubuntu-22.04
+    needs: build-upload-docs
+    steps:
+      - uses: actions/checkout@v4
+      - run: for i in `echo "${{ needs.build-upload-docs.outputs.pip-list-auth }}" | base64 -d | sed 's/_/-/' | egrep -v "pip==|setuptools==|wheel==|setuptools-git=="`; do grep -qq -i $i docs/requirements.txt || ( echo "$i not found" && exit 1 ); done
+      - run: for i in `echo "${{ needs.build-upload-docs.outputs.pip-list-rec }}" | base64 -d | sed 's/_/-/' | egrep -v "pip==|setuptools==|wheel==|setuptools-git=="`; do grep -qq -i $i docs/requirements.txt || ( echo "$i not found" && exit 1 ); done
+        working-directory: ./pdns/recursordist
+      - run: for i in `echo "${{ needs.build-upload-docs.outputs.pip-list-dnsdist }}" | base64 -d | sed 's/_/-/' | egrep -v "pip==|setuptools==|wheel==|setuptools-git=="`; do grep -qq -i $i docs/requirements.txt || ( echo "$i not found" && exit 1 ); done
+        working-directory: ./pdns/dnsdistdist
