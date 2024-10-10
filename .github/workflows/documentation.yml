@@ -12,12 +12,6 @@ permissions:
   contents: read
   pull-requests: write
 
-env:
-  PUBLISH_DOCS_TO_WEB1: ${{ vars.PUBLISH_DOCS_TO_WEB1 || 'true' }}
-  PUBLISH_DOCS_TO_NETLIFY: ${{ vars.PUBLISH_DOCS_TO_NETLIFY }}
-  PUBLISH_DOCS_TO_AWS: ${{ vars.PUBLISH_DOCS_TO_AWS }}
-  PUBLISH_PRS_TO_NETLIFY: ${{ vars.PUBLISH_PRS_TO_NETLIFY }}
-
 jobs:
   build-docs:
     name: Build docs
@@ -132,7 +126,7 @@ jobs:
   publish-to-netlify:
     name: Publish to Netlify
     needs: build-docs
-    if: ${{ env.PUBLISH_DOCS_TO_NETLIFY == 'true' && (github.ref_name == 'master' || env.PUBLISH_PRS_TO_NETLIFY == 'true') }}
+    if: ${{ vars.PUBLISH_DOCS_TO_NETLIFY == 'true' && (github.ref_name == 'master' || vars.PUBLISH_PRS_TO_NETLIFY == 'true') }}
     runs-on: ubuntu-22.04
     env:
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_API_TOKEN }}
@@ -259,7 +253,7 @@ jobs:
   publish-to-web1:
     name: Publish to Web1
     needs: build-docs
-    if: ${{ github.ref_name == 'master' && env.PUBLISH_DOCS_TO_WEB1 == 'true' }}
+    if: ${{ github.ref_name == 'master' && vars.PUBLISH_DOCS_TO_WEB1 == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Check required secrets
@@ -307,7 +301,7 @@ jobs:
   publish-to-aws:
     name: Publish to AWS
     needs: build-docs
-    if: ${{ github.ref_name == 'master' && env.PUBLISH_DOCS_TO_AWS == 'true' }}
+    if: ${{ github.ref_name == 'master' && vars.PUBLISH_DOCS_TO_AWS == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Check required secrets
