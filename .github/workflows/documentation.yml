@@ -337,11 +337,14 @@ jobs:
           DOCS_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
           if [ -n "$DNSDIST_CLOUDFRONT_DISTRIBUTION_ID" ]; then
-            node .github/scripts/publish.js publish dnsdist.org artifacts/dnsdist-html-docs-${{needs.build-docs.outputs.pdns_version}}/dnsdist-html-docs /
+            tar -xf artifacts/dnsdist-html-docs-${{needs.build-docs.outputs.pdns_version}}/dnsdist-html-docs.tar
+            node .github/scripts/publish.js publish dnsdist.org dnsdist-html-docs /
           fi
           if [ -n "$DOCS_CLOUDFRONT_DISTRIBUTION_ID" ]; then
-            node .github/scripts/publish.js publish docs.powerdns.com artifacts/recursor-html-docs-${{needs.build-docs.outputs.pdns_version}}/rec-html-docs /recursor
-            node .github/scripts/publish.js publish docs.powerdns.com artifacts/authoritative-html-docs-${{needs.build-docs.outputs.pdns_version}}/auth-html-docs /authoritative
+            tar -xf artifacts/recursor-html-docs-${{needs.build-docs.outputs.pdns_version}}/rec-html-docs.tar
+            node .github/scripts/publish.js publish docs.powerdns.com rec-html-docs /recursor
+            tar -xf artifacts/authoritative-html-docs-${{needs.build-docs.outputs.pdns_version}}/auth-html-docs.tar
+            node .github/scripts/publish.js publish docs.powerdns.com auth-html-docs /authoritative
           fi
 
   validate-pip-hashes:
