@@ -315,12 +315,12 @@ jobs:
           missing_secrets=()
           [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing_secrets+=("AWS_ACCESS_KEY_ID")
           [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing_secrets+=("AWS_SECRET_ACCESS_KEY")
-          [ -z "${{ secrets.AWS_REGION }}" ] && missing_secrets+=("AWS_REGION")
-          [ -z "${{ secrets.S3_BUCKET }}" ] && missing_secrets+=("S3_BUCKET")
-          [ -z "${{ secrets.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DNSDIST_CLOUDFRONT_DISTRIBUTION_ID")
-          [ -z "${{ secrets.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DOCS_CLOUDFRONT_DISTRIBUTION_ID")
+          [ -z "${{ vars.AWS_REGION }}" ] && missing_secrets+=("AWS_REGION")
+          [ -z "${{ vars.S3_BUCKET }}" ] && missing_secrets+=("S3_BUCKET")
+          [ -z "${{ vars.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DNSDIST_CLOUDFRONT_DISTRIBUTION_ID")
+          [ -z "${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DOCS_CLOUDFRONT_DISTRIBUTION_ID")
           if [ ${#missing_secrets[@]} -ne 0 ]; then
-            echo "Error: The following secrets are missing: ${missing_secrets[*]}"
+            echo "Error: The following secrets/variables are missing: ${missing_secrets[*]}"
             exit 1
           fi
       - uses: actions/setup-node@v3
@@ -336,10 +336,10 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          DNSDIST_CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}
-          DOCS_CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          DNSDIST_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}
+          DOCS_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
           if [ -n "$DNSDIST_CLOUDFRONT_DISTRIBUTION_ID" ]; then
             node .github/scripts/publish.js publish dnsdist.org artifacts/dnsdist-html-docs-${{needs.build-docs.outputs.pdns_version}}/dnsdist-html-docs /
