@@ -1,11 +1,11 @@
-const AWS = require('aws-sdk');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { CloudFrontClient, CreateInvalidationCommand } = require("@aws-sdk/client-cloudfront");
 const fs = require('fs');
 const path = require('path');
 
 // Configure AWS SDK
-AWS.config.update({ region: process.env.AWS_REGION });
-const s3 = new AWS.S3();
-const cloudfront = new AWS.CloudFront();
+const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const cloudFrontClient = new CloudFrontClient({ region: process.env.AWS_REGION });
 
 async function uploadToS3(bucketName, sourceDir, destDir = '') {
   const files = fs.readdirSync(sourceDir);
@@ -18,12 +18,13 @@ async function uploadToS3(bucketName, sourceDir, destDir = '') {
       await uploadToS3(bucketName, filePath, key);
     } else {
       const fileContent = fs.readFileSync(filePath);
-      await s3.putObject({
+      const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: key,
         Body: fileContent,
         ContentType: getContentType(file),
-      }).promise();
+      });
+      await s3Client.send(command);
     }
   }
 }
@@ -42,7 +43,7 @@ function getContentType(filename) {
 }
 
 async function invalidateCloudFront(distributionId, paths) {
-  await cloudfront.createInvalidation({
+  const command = new CreateInvalidationCommand({
     DistributionId: distributionId,
     InvalidationBatch: {
       CallerReference: Date.now().toString(),
@@ -51,7 +52,8 @@ async function invalidateCloudFront(distributionId, paths) {
         Items: paths,
       },
     },
-  }).promise();
+  });
+  await cloudFrontClient.send(command);
 }
 
 async function publishToSite(site, sourceDir, targetDir = '') {

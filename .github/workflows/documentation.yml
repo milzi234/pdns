@@ -12,6 +12,9 @@ permissions:
   contents: read
   pull-requests: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
+
 jobs:
   build-docs:
     name: Build docs
@@ -321,8 +324,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '20'
-      - name: Install AWS SDK
-        run: npm install aws-sdk
+      - name: Install AWS SDK v3
+        run: npm install @aws-sdk/client-s3 @aws-sdk/client-cloudfront
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
