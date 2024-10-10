@@ -147,7 +147,7 @@ jobs:
           fi
       - name: Install Netlify
         run: npm install netlify-cli@17.36.3 -g
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
@@ -268,7 +268,7 @@ jobs:
             echo "Error: The following secrets/variables are missing: ${missing_secrets[*]}"
             exit 1
           fi
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
       - id: setup-ssh
@@ -320,11 +320,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
-          node-version: '14'
+          node-version: '20'
       - name: Install AWS SDK
         run: npm install aws-sdk
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Publish to AWS
