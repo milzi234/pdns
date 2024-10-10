@@ -313,7 +313,7 @@ jobs:
           [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing_secrets+=("AWS_ACCESS_KEY_ID")
           [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing_secrets+=("AWS_SECRET_ACCESS_KEY")
           [ -z "${{ vars.AWS_REGION }}" ] && missing_secrets+=("AWS_REGION")
-          [ -z "${{ vars.S3_BUCKET }}" ] && missing_secrets+=("S3_BUCKET")
+          [ -z "${{ vars.DOCS_S3_BUCKET }}" ] && missing_secrets+=("DOCS_S3_BUCKET")
           [ -z "${{ vars.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DNSDIST_CLOUDFRONT_DISTRIBUTION_ID")
           [ -z "${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DOCS_CLOUDFRONT_DISTRIBUTION_ID")
           if [ ${#missing_secrets[@]} -ne 0 ]; then
@@ -335,7 +335,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ vars.AWS_REGION }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          DOCS_S3_BUCKET: ${{ vars.DOCS_S3_BUCKET }}
           DNSDIST_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}
           DOCS_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
