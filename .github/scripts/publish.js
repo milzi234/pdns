@@ -3,6 +3,7 @@ const { CloudFrontClient, CreateInvalidationCommand } = require("@aws-sdk/client
 const fs = require('fs');
 const path = require('path');
 
+
 // Configure AWS SDK
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const cloudFrontClient = new CloudFrontClient({ region: process.env.AWS_REGION });
