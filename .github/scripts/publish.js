@@ -57,14 +57,14 @@ async function invalidateCloudFront(distributionId, paths) {
 }
 
 async function publishToSite(site, sourceDir, targetDir = '') {
-  const bucketName = process.env.DOCS_S3_BUCKET;
+  const bucketName = process.env.AWS_S3_BUCKET_DOCS;
   let distributionId, siteDir;
 
   if (site === 'dnsdist.org') {
-    distributionId = process.env.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID;
+    distributionId = process.env.AWS_CLOUDFRONT_DISTRIBUTION_ID_DNSDIST;
     siteDir = 'dnsdist.org';
   } else if (site === 'docs.powerdns.com') {
-    distributionId = process.env.DOCS_CLOUDFRONT_DISTRIBUTION_ID;
+    distributionId = process.env.AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS;
     siteDir = 'docs.powerdns.com';
   } else {
     throw new Error('Invalid site specified');

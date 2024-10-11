@@ -7,12 +7,17 @@
 # - PUBLISH_DOCS_TO_WEB1: Set to 'true' to enable publishing to Web1
 # - PUBLISH_PRS_TO_NETLIFY: Set to 'true' to publish PR previews to Netlify
 
-# - AUTH_DOCS_DIR: Directory for Authoritative Server docs on Web1
 # - AWS_REGION: AWS region for S3 and CloudFront
-# - DNSDIST_CLOUDFRONT_DISTRIBUTION_ID: CloudFront distribution ID for DNSdist docs
-# - DOCS_CLOUDFRONT_DISTRIBUTION_ID: CloudFront distribution ID for PowerDNS docs
-# - DOCS_S3_BUCKET: S3 bucket name for documentation
+# - AWS_S3_BUCKET_DOCS: S3 bucket name for documentation
+# - AWS_CLOUDFRONT_DISTRIBUTION_ID_DNSDIST: CloudFront distribution ID for DNSdist docs
+# - AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS: CloudFront distribution ID for PowerDNS docs
+
+# - NETLIFY_SITE_ID_DOCS: Netlify site ID for PowerDNS docs
+# - NETLIFY_SITE_ID_DNSDIST: Netlify site ID for DNSdist docs
+
+
 # - REC_DOCS_DIR: Directory for Recursor docs on Web1
+# - AUTH_DOCS_DIR: Directory for Authoritative Server docs on Web1
 # - WEB1_HOSTKEY: SSH host key for Web1
 # - DOCS_HOST: Hostname for documentation server
 
@@ -20,8 +25,6 @@
 # - AWS_ACCESS_KEY_ID: AWS access key ID
 # - AWS_SECRET_ACCESS_KEY: AWS secret access key
 # - NETLIFY_API_TOKEN: API token for Netlify
-# - NETLIFY_SITE_ID_DOCS: Netlify site ID for PowerDNS docs
-# - NETLIFY_SITE_ID_DNSDIST: Netlify site ID for DNSdist docs
 # - WEB1_DOCS_SECRET: SSH key for Web1 access
 
 ---
@@ -335,9 +338,9 @@ jobs:
           [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing_secrets+=("AWS_ACCESS_KEY_ID")
           [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing_secrets+=("AWS_SECRET_ACCESS_KEY")
           [ -z "${{ vars.AWS_REGION }}" ] && missing_secrets+=("AWS_REGION")
-          [ -z "${{ vars.DOCS_S3_BUCKET }}" ] && missing_secrets+=("DOCS_S3_BUCKET")
-          [ -z "${{ vars.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DNSDIST_CLOUDFRONT_DISTRIBUTION_ID")
-          [ -z "${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}" ] && missing_secrets+=("DOCS_CLOUDFRONT_DISTRIBUTION_ID")
+          [ -z "${{ vars.AWS_S3_BUCKET_DOCS }}" ] && missing_secrets+=("AWS_S3_BUCKET_DOCS")
+          [ -z "${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID_DNSDIST }}" ] && missing_secrets+=("AWS_CLOUDFRONT_DISTRIBUTION_ID_DNSDIST")
+          [ -z "${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS }}" ] && missing_secrets+=("AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS")
           if [ ${#missing_secrets[@]} -ne 0 ]; then
             echo "Error: The following secrets/variables are missing: ${missing_secrets[*]}"
             exit 1
@@ -357,15 +360,15 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ vars.AWS_REGION }}
-          DOCS_S3_BUCKET: ${{ vars.DOCS_S3_BUCKET }}
-          DNSDIST_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DNSDIST_CLOUDFRONT_DISTRIBUTION_ID }}
-          DOCS_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}
+          AWS_S3_BUCKET_DOCS: ${{ vars.AWS_S3_BUCKET_DOCS }}
+          AWS_CLOUDFRONT_DISTRIBUTION_ID_DNSDIST: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID_DNSDIST }}
+          AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS }}
         run: |
-          if [ -n "$DNSDIST_CLOUDFRONT_DISTRIBUTION_ID" ]; then
+          if [ -n "$AWS_CLOUDFRONT_DISTRIBUTION_ID_DNSDIST" ]; then
             tar -xf artifacts/dnsdist-html-docs-${{needs.build-docs.outputs.pdns_version}}/dnsdist-html-docs.tar
             node .github/scripts/publish.js publish dnsdist.org dnsdist-html-docs /
           fi
-          if [ -n "$DOCS_CLOUDFRONT_DISTRIBUTION_ID" ]; then
+          if [ -n "$AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS" ]; then
             tar -xf artifacts/recursor-html-docs-${{needs.build-docs.outputs.pdns_version}}/rec-html-docs.tar
             node .github/scripts/publish.js publish docs.powerdns.com rec-html-docs /recursor
             tar -xf artifacts/authoritative-html-docs-${{needs.build-docs.outputs.pdns_version}}/auth-html-docs.tar
