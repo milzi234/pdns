@@ -1,3 +1,29 @@
+# This workflow builds and publishes documentation for PowerDNS products.
+# It is controlled by the following variables and secrets:
+
+# Variables:
+# - PUBLISH_DOCS_TO_AWS: Set to 'true' to enable publishing to AWS
+# - PUBLISH_DOCS_TO_NETLIFY: Set to 'true' to enable publishing to Netlify
+# - PUBLISH_DOCS_TO_WEB1: Set to 'true' to enable publishing to Web1
+# - PUBLISH_PRS_TO_NETLIFY: Set to 'true' to publish PR previews to Netlify
+
+# - AUTH_DOCS_DIR: Directory for Authoritative Server docs on Web1
+# - AWS_REGION: AWS region for S3 and CloudFront
+# - DNSDIST_CLOUDFRONT_DISTRIBUTION_ID: CloudFront distribution ID for DNSdist docs
+# - DOCS_CLOUDFRONT_DISTRIBUTION_ID: CloudFront distribution ID for PowerDNS docs
+# - DOCS_S3_BUCKET: S3 bucket name for documentation
+# - REC_DOCS_DIR: Directory for Recursor docs on Web1
+# - WEB1_HOSTKEY: SSH host key for Web1
+# - DOCS_HOST: Hostname for documentation server
+
+# Secrets:
+# - AWS_ACCESS_KEY_ID: AWS access key ID
+# - AWS_SECRET_ACCESS_KEY: AWS secret access key
+# - NETLIFY_API_TOKEN: API token for Netlify
+# - NETLIFY_SITE_ID_DOCS: Netlify site ID for PowerDNS docs
+# - NETLIFY_SITE_ID_DNSDIST: Netlify site ID for DNSdist docs
+# - WEB1_DOCS_SECRET: SSH key for Web1 access
+
 ---
 name: 'Documentation'
 
@@ -126,6 +152,15 @@ jobs:
         run: |
           cp ./pdns/dnsdistdist/docs/_build/latex/dnsdist.pdf ./pdns/dnsdistdist/docs/_build/dnsdist-html-docs/
 
+      # Build website
+      - name: Build website
+        run: |
+          tar cf website.tar website
+      - uses: actions/upload-artifact@v4
+        with:
+          name: website-${{steps.get-version.outputs.pdns_version}}
+          path: website.tar
+
   publish-to-netlify:
     name: Publish to Netlify
     needs: build-docs
@@ -133,16 +168,14 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_API_TOKEN }}
-      NETLIFY_SITE_ID_AUTH: ${{ secrets.NETLIFY_SITE_ID_AUTH }}
-      NETLIFY_SITE_ID_REC: ${{ secrets.NETLIFY_SITE_ID_REC }}
+      NETLIFY_SITE_ID_DOCS: ${{ secrets.NETLIFY_SITE_ID_DOCS }}
       NETLIFY_SITE_ID_DNSDIST: ${{ secrets.NETLIFY_SITE_ID_DNSDIST }}
     steps:
       - name: Check required secrets
         run: |
           missing_secrets=()
           [ -z "$NETLIFY_AUTH_TOKEN" ] && missing_secrets+=("NETLIFY_API_TOKEN")
-          [ -z "$NETLIFY_SITE_ID_AUTH" ] && missing_secrets+=("NETLIFY_SITE_ID_AUTH")
-          [ -z "$NETLIFY_SITE_ID_REC" ] && missing_secrets+=("NETLIFY_SITE_ID_REC")
+          [ -z "$NETLIFY_SITE_ID_DOCS" ] && missing_secrets+=("NETLIFY_SITE_ID_DOCS")
           [ -z "$NETLIFY_SITE_ID_DNSDIST" ] && missing_secrets+=("NETLIFY_SITE_ID_DNSDIST")
           if [ ${#missing_secrets[@]} -ne 0 ]; then
             echo "Error: The following secrets are missing: ${missing_secrets[*]}"
@@ -154,31 +187,25 @@ jobs:
         with:
           path: artifacts
 
-      - name: Deploy Auth docs to Netlify
+      - name: Deploy docs to Netlify
         run: |
-          tar -xf artifacts/authoritative-html-docs-${{needs.build-docs.outputs.pdns_version}}/auth-html-docs.tar
+          mkdir -p docs_site
+          tar -xf artifacts/authoritative-html-docs-${{needs.build-docs.outputs.pdns_version}}/auth-html-docs.tar -C docs_site
+          tar -xf artifacts/recursor-html-docs-${{needs.build-docs.outputs.pdns_version}}/rec-html-docs.tar -C docs_site
+          tar -xf artifacts/website-${{needs.build-docs.outputs.pdns_version}}/website.tar -C docs_site
+          mv docs_site/auth-html-docs docs_site/authoritative
+          mv docs_site/rec-html-docs docs_site/recursor
+          mv docs_site/website/docs.powerdns.com/* docs_site/
+          rmdir docs_site/website/docs.powerdns.com docs_site/website
           prod_flag=""
           if [ "${{ github.ref_name }}" = "master" ]; then prod_flag="--prod"; fi
           netlify deploy \
-            --dir ./auth-html-docs \
-            --site $NETLIFY_SITE_ID_AUTH \
+            --dir ./docs_site \
+            --site $NETLIFY_SITE_ID_DOCS \
             --auth $NETLIFY_AUTH_TOKEN \
             $prod_flag \
             --json \
-            > netlify_deploy_auth_output.json
-
-      - name: Deploy Recursor docs to Netlify
-        run: |
-          tar -xf artifacts/recursor-html-docs-${{needs.build-docs.outputs.pdns_version}}/rec-html-docs.tar
-          prod_flag=""
-          if [ "${{ github.ref_name }}" = "master" ]; then prod_flag="--prod"; fi
-          netlify deploy \
-            --dir ./rec-html-docs \
-            --site $NETLIFY_SITE_ID_REC \
-            --auth $NETLIFY_AUTH_TOKEN \
-            $prod_flag \
-            --json \
-            > netlify_deploy_rec_output.json
+            > netlify_deploy_docs_output.json
 
       - name: Deploy DNSdist docs to Netlify
         run: |
@@ -197,13 +224,9 @@ jobs:
         id: url_previews
         if: ${{ github.ref_name != 'master' }}
         run: |
-          if [ -f netlify_deploy_auth_output.json ]; then
-            AUTH_PREVIEW_URL=$(jq -r '.deploy_url' netlify_deploy_auth_output.json)
-            echo "AUTH_PREVIEW_URL=$AUTH_PREVIEW_URL" >> "$GITHUB_OUTPUT"
-          fi
-          if [ -f netlify_deploy_rec_output.json ]; then
-            REC_PREVIEW_URL=$(jq -r '.deploy_url' netlify_deploy_rec_output.json)
-            echo "REC_PREVIEW_URL=$REC_PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          if [ -f netlify_deploy_docs_output.json ]; then
+            DOCS_PREVIEW_URL=$(jq -r '.deploy_url' netlify_deploy_docs_output.json)
+            echo "DOCS_PREVIEW_URL=$DOCS_PREVIEW_URL" >> "$GITHUB_OUTPUT"
           fi
           if [ -f netlify_deploy_dnsdist_output.json ]; then
             DNSDIST_PREVIEW_URL=$(jq -r '.deploy_url' netlify_deploy_dnsdist_output.json)
@@ -214,8 +237,7 @@ jobs:
         uses: actions/github-script@v7
         if: ${{ github.ref_name != 'master' }}
         env:
-          AUTH_PREVIEW_URL: ${{ steps.url_previews.outputs.AUTH_PREVIEW_URL }}
-          REC_PREVIEW_URL: ${{ steps.url_previews.outputs.REC_PREVIEW_URL }}
+          DOCS_PREVIEW_URL: ${{ steps.url_previews.outputs.DOCS_PREVIEW_URL }}
           DNSDIST_PREVIEW_URL: ${{ steps.url_previews.outputs.DNSDIST_PREVIEW_URL }}
         with:
           script: |
@@ -230,11 +252,10 @@ jobs:
 
               if(issueNumber){
                 let commentBody = 'Preview URLs:\n'
-                if (process.env.AUTH_PREVIEW_URL) {
-                  commentBody += `- Authoritative: ${process.env.AUTH_PREVIEW_URL}\n`
-                }
-                if (process.env.REC_PREVIEW_URL) {
-                  commentBody += `- Recursor: ${process.env.REC_PREVIEW_URL}\n`
+                if (process.env.DOCS_PREVIEW_URL) {
+                  commentBody += `- Docs (Auth, Rec, Root): ${process.env.DOCS_PREVIEW_URL}\n`
+                  commentBody += `  - Authoritative: ${process.env.DOCS_PREVIEW_URL}/authoritative\n`
+                  commentBody += `  - Recursor: ${process.env.DOCS_PREVIEW_URL}/recursor\n`
                 }
                 if (process.env.DNSDIST_PREVIEW_URL) {
                   commentBody += `- DNSdist: ${process.env.DNSDIST_PREVIEW_URL}\n`
@@ -301,6 +322,7 @@ jobs:
         env:
           DOCS_HOST: ${{vars.DOCS_HOST}}
 
+
   publish-to-aws:
     name: Publish to AWS
     needs: build-docs
@@ -348,7 +370,8 @@ jobs:
             node .github/scripts/publish.js publish docs.powerdns.com rec-html-docs /recursor
             tar -xf artifacts/authoritative-html-docs-${{needs.build-docs.outputs.pdns_version}}/auth-html-docs.tar
             node .github/scripts/publish.js publish docs.powerdns.com auth-html-docs /authoritative
-            node .github/scripts/publish.js publish docs.powerdns.com website/docs.powerdns.com
+            tar -xf artifacts/website-${{needs.build-docs.outputs.pdns_version}}/website.tar
+            node .github/scripts/publish.js publish docs.powerdns.com website/docs.powerdns.com /
           fi
 
   validate-pip-hashes:
