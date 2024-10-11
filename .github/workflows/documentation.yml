@@ -171,8 +171,8 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_API_TOKEN }}
-      NETLIFY_SITE_ID_DOCS: ${{ secrets.NETLIFY_SITE_ID_DOCS }}
-      NETLIFY_SITE_ID_DNSDIST: ${{ secrets.NETLIFY_SITE_ID_DNSDIST }}
+      NETLIFY_SITE_ID_DOCS: ${{ vars.NETLIFY_SITE_ID_DOCS }}
+      NETLIFY_SITE_ID_DNSDIST: ${{ vars.NETLIFY_SITE_ID_DNSDIST }}
     steps:
       - name: Check required secrets
         run: |
