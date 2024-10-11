@@ -198,8 +198,9 @@ jobs:
           tar -xf artifacts/website-${{needs.build-docs.outputs.pdns_version}}/website.tar -C docs_site
           mv docs_site/auth-html-docs docs_site/authoritative
           mv docs_site/rec-html-docs docs_site/recursor
-          mv docs_site/website/docs.powerdns.com/* docs_site/
-          rmdir docs_site/website/docs.powerdns.com docs_site/website
+          mv docs_site/website docs_site/docs.powerdns.com
+          mv docs_site/docs.powerdns.com/* docs_site/
+          rmdir docs_site/docs.powerdns.com 
           prod_flag=""
           if [ "${{ github.ref_name }}" = "master" ]; then prod_flag="--prod"; fi
           netlify deploy \
